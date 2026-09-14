@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MelodyBot — your music-only AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14110d;
+    --surface: #1e1a14;
+    --surface-raised: #26211a;
+    --border: #362e23;
+    --text: #f2ead9;
+    --text-muted: #a8977c;
+    --gold: #e3a857;
+    --gold-dim: #8a6a35;
+    --groove: #0e0c09;
+    --radius: 14px;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    height: 100%;
+    margin: 0;
+  }
+
+  body{
+    background:
+      radial-gradient(circle at 15% -10%, #241d13 0%, transparent 45%),
+      radial-gradient(circle at 100% 110%, #201a10 0%, transparent 40%),
+      var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    min-height: 100vh;
+    padding: 28px 16px;
+  }
+
+  .app{
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 56px);
+    min-height: 520px;
+  }
+
+  /* ---------- Header ---------- */
+  .header{
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 6px 4px 22px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 18px;
+  }
+
+  .vinyl{
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background:
+      radial-gradient(circle at center, var(--gold) 0 6px, var(--groove) 7px 9px,
+        #1a1712 9px 12px, var(--groove) 12px 14px, #1a1712 14px 17px,
+        var(--groove) 17px 19px, #1a1712 19px 22px, var(--groove) 22px 26px);
+    box-shadow: inset 0 0 0 1px #000, 0 2px 10px rgba(0,0,0,.5);
+    animation: spin 6s linear infinite;
+    animation-play-state: paused;
+  }
+  .vinyl.spinning{ animation-play-state: running; }
+
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .header-text h1{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-style: italic;
+    font-size: 1.5rem;
+    margin: 0;
+    letter-spacing: .2px;
+  }
+
+  .header-text p{
+    margin: 3px 0 0;
+    font-size: .82rem;
+    color: var(--text-muted);
+  }
+
+  .status{
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: .78rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  .status-dot{
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #6fbf7a;
+    box-shadow: 0 0 6px #6fbf7a;
+  }
+
+  /* ---------- Chat log ---------- */
+  .log{
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 4px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .log::-webkit-scrollbar{ width: 8px; }
+  .log::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 8px; }
+
+  .row{
+    display: flex;
+    gap: 10px;
+    max-width: 88%;
+  }
+  .row.user{ align-self: flex-end; flex-direction: row-reverse; }
+  .row.bot{ align-self: flex-start; }
+
+  .avatar{
+    width: 30px; height: 30px; border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .78rem;
+    margin-top: 2px;
+  }
+  .row.bot .avatar{
+    background: var(--groove);
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+  }
+  .row.user .avatar{
+    background: var(--surface-raised);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  .bubble{
+    padding: 11px 15px;
+    border-radius: var(--radius);
+    font-size: .94rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+  }
+  .row.bot .bubble{
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top-left-radius: 4px;
+  }
+  .row.user .bubble{
+    background: linear-gradient(180deg, #2c2519, #241f16);
+    border: 1px solid var(--gold-dim);
+    border-top-right-radius: 4px;
+  }
+
+  .bubble.error{
+    border-color: #7a3b30;
+    color: #e0a99c;
+  }
+
+  /* typing indicator: equalizer bars */
+  .eq{
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 16px;
+    padding: 2px 2px;
+  }
+  .eq span{
+    width: 3px;
+    background: var(--gold);
+    border-radius: 2px;
+    animation: bounce 0.9s ease-in-out infinite;
+  }
+  .eq span:nth-child(1){ animation-delay: 0s; }
+  .eq span:nth-child(2){ animation-delay: .15s; }
+  .eq span:nth-child(3){ animation-delay: .3s; }
+  .eq span:nth-child(4){ animation-delay: .45s; }
+  @keyframes bounce{
+    0%, 100%{ height: 4px; }
+    50%{ height: 15px; }
+  }
+
+  /* ---------- Composer ---------- */
+  .composer{
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 8px 8px 16px;
+    margin-top: 14px;
+  }
+
+  .composer textarea{
+    flex: 1;
+    resize: none;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: .94rem;
+    line-height: 1.4;
+    max-height: 120px;
+    padding: 8px 0;
+  }
+  .composer textarea::placeholder{ color: var(--text-muted); }
+
+  .send-btn{
+    flex-shrink: 0;
+    border: none;
+    cursor: pointer;
+    background: var(--gold);
+    color: #221a0d;
+    font-weight: 700;
+    font-size: .86rem;
+    border-radius: 10px;
+    padding: 11px 18px;
+    transition: transform .12s ease, background .12s ease;
+  }
+  .send-btn:hover{ background: #edb768; }
+  .send-btn:active{ transform: scale(.96); }
+  .send-btn:disabled{
+    background: var(--surface-raised);
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
+
+  .hint{
+    text-align: center;
+    color: var(--text-muted);
+    font-size: .72rem;
+    margin-top: 10px;
+  }
+
+  @media (max-width: 480px){
+    .app{ height: calc(100vh - 32px); }
+    .row{ max-width: 94%; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="app">
+    <div class="header">
+      <div class="vinyl" id="vinyl"></div>
+      <div class="header-text">
+        <h1>MelodyBot</h1>
+        <p>Your assistant for all things music</p>
+      </div>
+      <div class="status"><span class="status-dot"></span>on air</div>
+    </div>
+
+    <div class="log" id="log">
+      <div class="row bot">
+        <div class="avatar">♪</div>
+        <div class="bubble">Hey! I'm MelodyBot 🎵 Ask me about artists, genres, instruments, music theory, or anything else music related.</div>
+      </div>
+    </div>
+
+    <div class="composer">
+      <textarea id="input" rows="1" placeholder="Ask about a song, artist, or genre..."></textarea>
+      <button class="send-btn" id="sendBtn">Send</button>
+    </div>
+    <p class="hint">MelodyBot only answers music-related questions.</p>
+  </div>
+
+<script>
+  const log = document.getElementById('log');
+  const input = document.getElementById('input');
+  const sendBtn = document.getElementById('sendBtn');
+  const vinyl = document.getElementById('vinyl');
+
+  function scrollToBottom(){
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function addMessage(text, sender, isError = false){
+    const row = document.createElement('div');
+    row.className = 'row ' + sender;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = sender === 'bot' ? '♪' : 'You';
+    avatar.style.fontSize = sender === 'bot' ? '.78rem' : '.62rem';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble' + (isError ? ' error' : '');
+    bubble.textContent = text;
+
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    log.appendChild(row);
+    scrollToBottom();
+    return bubble;
+  }
+
+  function addTypingIndicator(){
+    const row = document.createElement('div');
+    row.className = 'row bot';
+    row.id = 'typing-row';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = '♪';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.innerHTML = '<div class="eq"><span></span><span></span><span></span><span></span></div>';
+
+    row.appendChild(avatar);
+    row.appendChild(bubble);
+    log.appendChild(row);
+    scrollToBottom();
+  }
+
+  function removeTypingIndicator(){
+    const row = document.getElementById('typing-row');
+    if(row) row.remove();
+  }
+
+  async function sendMessage(){
+    const text = input.value.trim();
+    if(!text) return;
+
+    addMessage(text, 'user');
+    input.value = '';
+    input.style.height = 'auto';
+    sendBtn.disabled = true;
+    vinyl.classList.add('spinning');
+    addTypingIndicator();
+
+    try{
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+
+      const data = await res.json();
+      removeTypingIndicator();
+
+      if(!res.ok){
+        addMessage(data.error || 'Something went wrong. Please try again.', 'bot', true);
+      } else {
+        addMessage(data.reply, 'bot');
+      }
+    } catch(err){
+      removeTypingIndicator();
+      addMessage('Could not reach the server. Please check your connection.', 'bot', true);
+    } finally {
+      sendBtn.disabled = false;
+      vinyl.classList.remove('spinning');
+      input.focus();
+    }
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+
+  input.addEventListener('keydown', (e) => {
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+
+  input.focus();
+</script>
+</body>
+</html>
